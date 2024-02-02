@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+
+      body, html {
+        margin: 0;
+        font-family: sans-serif;
+      }
+
+      h1 {
+        text-align: center;
+        margin-top: 100px;
+      }
+
+      .ok {
+        background-color: #35963b !important;
+      }
+      .err {
+        background-color: #a72424 !important;
+      }
+      .unknown {
+        background-color: #5a5a5a !important;
+      }
+        
+    </style>
+    <script src="https://visjs.github.io/vis-timeline/standalone/umd/vis-timeline-graph2d.min.js"></script>
+</head>
+<body>
+
+<h1 id="percentage"></h1>
+<div id="visualization"></div>
+
+<script>
+fetch('/data')
+    .then(response => response.json())
+    .then(data => {
+      console.log('hello');
+      var container = document.getElementById("visualization");
+      var title = document.getElementById("percentage");
+    
+      var items = [];
+      var total_time = 0;
+      var ok_time = 0;
+
+      for (var i = 0; i < data.states.length; i++) {
+        const startSeconds = data.states[i].start;
+        const start = new Date(startSeconds * 1000);
+        let endSeconds;
+        if (i + 1 == data.states.length) {
+          endSeconds = data.last_update;
+        } else {
+          endSeconds = data.states[i + 1].start;
+        }
+        const end = new Date(endSeconds * 1000);
+        
+        const name = data.states[i].state.toLowerCase();
+
+        const duration = endSeconds - startSeconds;
+
+        if (name != 'unknown') {
+          if (name == 'ok') {
+            ok_time += duration;
+          }
+          total_time += duration;
+        }
+
+        items.push({
+          id: i,
+          content: '',
+          start: start,
+          end: end,
+          className: name,
+          title: `Duration: ${duration}s`
+        });
+      }
+
+      const start = data.states[0].start;
+      const end = data.last_update;
+      const overall = end - start;
+
+      var dataset = new vis.DataSet(items);
+      var options = {
+        start: new Date((start - overall * 0.05) * 1000),
+        end: new Date((end + overall * 0.05) * 1000),
+        editable: false,
+        margin: {
+            item : {
+                horizontal : -1
+            }
+        }
+      };
+      var timeline = new vis.Timeline(container);
+      timeline.setOptions(options);
+      timeline.setItems(dataset);
+
+      const percentage = Math.round(ok_time / total_time * 100 * 100) / 100;
+      title.innerHTML = `Uptime: ${percentage}%`;
+    });
+</script>
+
+</body>
+</html>
